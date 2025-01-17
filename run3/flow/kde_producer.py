@@ -75,9 +75,9 @@ if __name__ == "__main__":
         
     if args.config != parser.get_default("config"):
         for pt_low, pt_max in zip(config['pt_mins'], config['pt_maxs']):
-            KDE, histo = kde_producer_grid(config['input'], config['variable'], pt_low, 
+            KDE, histo = kde_producer(config['input'], config['variable'], pt_low, 
                                            pt_max, config['chn_flag'], outfile)
     else:
-        KDE, histo = kde_producer_grid(args.input, args.var, args.ptmin,
+        KDE, histo = kde_producer(args.input, args.var, args.ptmin,
                                        args.ptmax, args.flag, outfile)
     outfile.Close()    

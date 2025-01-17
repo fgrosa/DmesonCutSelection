@@ -17,29 +17,20 @@ SetGlobalStyle(titleoffsety=1.1, maxdigits=3, topmargin=0.1,
                labelsizey=0.04, setoptstat=0, setopttitle=0,
                setdecimals=True, titleoffsetx=0.91, titlesizex=0.05)
 
-def check_cent_sel(charm_hadron, centclass, infile):
-    if charm_hadron in ['Dplus', 'Ds']:
-        cent_hist = infile.Get('hf-candidate-creator-3prong/hSelCollisionsCent')
-        _, centMinMax = get_centrality_bins(centclass)
-        for i in range(cent_hist.GetNbinsX()):
-            if not (cent_hist.GetBinContent(centMinMax[0] + 1) > 0 \
-                and cent_hist.GetBinContent(centMinMax[0]) == 0 \
-                and cent_hist.GetBinContent(centMinMax[1]) > 0 \
-                and cent_hist.GetBinContent(centMinMax[1] + 1) == 0):
-                print(f'\033[91mFATAL: Invalid centrality class: {centclass}. Exit!\033[0m')
-                sys.exit(1)
-    elif charm_hadron == 'Dzero':
-        cent_hist = infile.Get('hf-candidate-creator-2prong/hSelCollisionsCent')
-        _, centMinMax = get_centrality_bins(centclass)
-        for i in range(cent_hist.GetNbinsX()):
-            if not (cent_hist.GetBinContent(centMinMax[0] + 1) > 0 \
-                    and cent_hist.GetBinContent(centMinMax[0]) == 0 \
-                    and cent_hist.GetBinContent(centMinMax[1]) > 0 \
-                    and cent_hist.GetBinContent(centMinMax[1] + 1) == 0):
-                print(f'\033[91mFATAL: Invalid centrality class: {centclass}. Exit!\033[0m')
-                sys.exit(1)
-    else:
+def check_cent_sel(charm_hadron, centmin, centmax, infile):
+    if charm_hadron != 'Dzero' and charm_hadron != 'Dplus' and charm_hadron != 'Ds':
         print('\033[93mWARNING: Invalid charm hadron for centrality check.\033[0m')
+        sys.exit(1)
+
+    nprongs = 2 if charm_hadron == 'Dzero' else 3
+    cent_hist = infile.Get(f'hf-candidate-creator-{nprongs}prong/hSelCollisionsCent')
+    for i in range(cent_hist.GetNbinsX()):
+        if not (cent_hist.GetBinContent(centmin + 1) > 0 \
+            and cent_hist.GetBinContent(centmin) == 0 \
+            and cent_hist.GetBinContent(centmax) > 0 \
+            and cent_hist.GetBinContent(centmax + 1) == 0):
+            print(f'\033[91mFATAL: Invalid centrality class: [{centmin}-{centmax}]. Exit!\033[0m')
+            sys.exit(1)
 
 def compute_eff(config_file, centclass, inputFile, outputdir, suffix):
     '''
@@ -72,7 +63,8 @@ def compute_eff(config_file, centclass, inputFile, outputdir, suffix):
 
     #_____________________________________________________________________________________
     # Check centrality selection
-    check_cent_sel(charm_hadron, centclass, infile)
+    centMin, centMax = get_centrality_bins(centclass)[1]
+    check_cent_sel(charm_hadron, centMin, centMax, infile)
 
     if charm_hadron == 'Dplus':
         gen_prompt_hist = infile.Get('hf-task-dplus/hPtGenPrompt')
@@ -180,10 +172,11 @@ def compute_eff_thns(config_file, centclass, inputFile, outputdir, suffix, batch
 
     #_____________________________________________________________________________________
     # Check centrality selection
-    check_cent_sel(charm_hadron, centclass, infile)
+    centMin, centMax = get_centrality_bins(centclass)[1]
+    check_cent_sel(charm_hadron, centMin, centMax, infile)
 
     #_____________________________________________________________________________________
-    # difne histograms
+    # define histograms
     hEffPrompt = TH1F('hEffPrompt', ';#it{p}_{T} (GeV/#it{c});Efficiency', nPtBins, np.asarray(ptLims, 'd'))
     hEffFD = TH1F('hEffFD', ';#it{p}_{T} (GeV/#it{c});Efficiency', nPtBins, np.asarray(ptLims, 'd'))
     hYieldPromptGen = TH1F('hYieldPromptGen', ';#it{p}_{T} (GeV/#it{c}); # Generated MC', nPtBins, np.asarray(ptLims, 'd'))
@@ -209,10 +202,10 @@ def compute_eff_thns(config_file, centclass, inputFile, outputdir, suffix, batch
     for iPt, (ptMin, ptMax) in enumerate(zip(ptMins, ptMaxs)):
         ## get inpput histograms
         ## whether need to minus reflection from prompt or FD?
-        hRecoPrompt.append(infile.Get('hPromptPt_%0.f_%0.f' % (ptMin*10, ptMax*10)))
-        hRecoFD.append(infile.Get('hFDPt_%0.f_%0.f' % (ptMin*10, ptMax*10)))
-        hGenPrompt.append(infile.Get('hPromptGenPt_%0.f_%0.f' % (ptMin*10, ptMax*10)))
-        hGenFD.append(infile.Get('hFDGenPt_%0.f_%0.f' % (ptMin*10, ptMax*10)))
+        hRecoPrompt.append(infile.Get(f'cent_bins{centMin}_{centMax}/pt_bins%0.f_%0.f/hPromptPt' % (ptMin*10, ptMax*10)))
+        hRecoFD.append(infile.Get(f'cent_bins{centMin}_{centMax}/pt_bins%0.f_%0.f/hFDPt' % (ptMin*10, ptMax*10)))
+        hGenPrompt.append(infile.Get(f'cent_bins{centMin}_{centMax}/pt_bins%0.f_%0.f/hPromptGenPt' % (ptMin*10, ptMax*10)))
+        hGenFD.append(infile.Get(f'cent_bins{centMin}_{centMax}/pt_bins%0.f_%0.f/hFDGenPt' % (ptMin*10, ptMax*10)))
 
         ## load the values
         nRecoPromptUnc, nGenPromptUnc, nRecoFDUnc, nGenFDUnc = (ctypes.c_double() for _ in range(4))

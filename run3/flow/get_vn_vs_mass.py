@@ -9,13 +9,14 @@ import argparse
 import ctypes
 import numpy as np
 import yaml
+import os
 from ROOT import TLatex, TFile, TCanvas, TLegend, TH1D, TH1F, TDatabasePDG, TGraphAsymmErrors # pylint: disable=import-error,no-name-in-module
 from ROOT import gROOT, gPad, gInterpreter, kBlack, kRed, kAzure, kGray, kOrange, kGreen, kMagenta, kFullCircle, kFullSquare, kOpenCircle # pylint: disable=import-error,no-name-in-module
 from flow_analysis_utils import get_centrality_bins, get_vnfitter_results, get_ep_vn, getD0ReflHistos, get_particle_info # pylint: disable=import-error,no-name-in-module
 sys.path.append('../../..')
 sys.path.append('../..')
-gInterpreter.ProcessLine(f'#include "./invmassfitter/InvMassFitter.cxx"')
-gInterpreter.ProcessLine(f'#include "./invmassfitter/VnVsMassFitter.cxx"')
+gInterpreter.ProcessLine(f'#include "{os.getcwd().split('flow')[0] + 'flow'}/invmassfitter/InvMassFitter.cxx"')
+gInterpreter.ProcessLine(f'#include "{os.getcwd().split('flow')[0] + 'flow'}/invmassfitter/VnVsMassFitter.cxx"')
 from ROOT import InvMassFitter, VnVsMassFitter
 from utils.StyleFormatter import SetGlobalStyle, SetObjectStyle, DivideCanvas
 from utils.FitUtils import SingleGaus, DoubleGaus, DoublePeakSingleGaus, DoublePeakDoubleGaus, RebinHisto
@@ -54,8 +55,8 @@ def get_vn_vs_mass(fitConfigFileName, centClass, inFileName,
     massMaxs = fitConfig['MassMax']
     if not isinstance(massMaxs, list):
         massMaxs = [massMaxs] * len(ptMins)
-    useRefl = fitConfig['enableRef']
-    reflFile = fitConfig['reflFile']
+    useRefl = fitConfig.get('InclRefl')
+    reflFile = fitConfig.get('ReflFile', None)
 
     # read fit configuration
     if not isinstance(fixSigma, list):
@@ -748,7 +749,6 @@ def get_vn_vs_mass(fitConfigFileName, centClass, inFileName,
                 suffix_pdf = ')'
             else:
                 suffix_pdf = ''
-
             if len(ptMins)==1:
                 cSimFit[iPt].SaveAs(f'{outputdir}/SimFit{suffix}_{particleName}.pdf')
             else:
