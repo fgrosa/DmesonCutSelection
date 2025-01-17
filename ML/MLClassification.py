@@ -20,7 +20,27 @@ from hipe4ml.model_handler import ModelHandler
 from hipe4ml.tree_handler import TreeHandler
 from hipe4ml_converter.h4ml_converter import H4MLConverter
 
-def data_prep(inputCfg, iBin, PtBin, OutPutDirPt, PromptDf, FDDf, BkgDf): #pylint: disable=too-many-statements, too-many-branches
+def plot_hyp_optimization_results(trials_df, OutPutDir):
+    trials_df = trials_df.drop(columns=['number'])
+    n_columns = len(trials_df.columns)
+    n_rows = (n_columns // 3) + (1 if n_columns % 3 else 0)
+    fig, axes = plt.subplots(n_rows, 3, figsize=(15, 5 * n_rows))
+    axes = axes.flatten()
+    for i, column in enumerate(trials_df.columns):
+        axes[i].plot(trials_df[column], label=column, marker='o', linestyle='-', color='b')
+        axes[i].set_xlabel('Trial')
+        if column == 'value':
+            axes[i].set_ylabel('ROC')
+            axes[i].set_title('ROC')
+        else:
+            axes[i].set_ylabel('Value')
+            axes[i].set_title(column)
+    for i in range(n_columns, len(axes)):
+        fig.delaxes(axes[i])
+    fig.savefig(f"{OutPutDir}.pdf")
+    trials_df.to_parquet(f"{OutPutDir}.parquet.gzip")
+
+def data_prep(inputCfg, iBin, PtBin, OutPutDirPt, PromptDf, FDDf, BkgDf, nCandSummary): #pylint: disable=too-many-statements, too-many-branches
     '''
     function for data preparation
     '''
@@ -56,7 +76,9 @@ def data_prep(inputCfg, iBin, PtBin, OutPutDirPt, PromptDf, FDDf, BkgDf): #pylin
         if nFD > nCandToKeep:
             print((f'Remaining FD candidates ({nFD - nCandToKeep}) will be used for the '
                    'efficiency together with test set'))
-
+        if inputCfg.get('savecands'):
+            nCandSummary.append([nCandToKeep, nCandToKeep, nCandToKeep])
+            
         TotDf = pd.concat([BkgDf.iloc[:nCandToKeep], PromptDf.iloc[:nCandToKeep], FDDf.iloc[:nCandToKeep]], sort=True)
         if FDDf.empty:
             LabelsArray = np.array([0]*nCandToKeep + [1]*nCandToKeep)
@@ -85,6 +107,8 @@ def data_prep(inputCfg, iBin, PtBin, OutPutDirPt, PromptDf, FDDf, BkgDf): #pylin
             nCandBkg = nBkg
             print('\033[93mWARNING: using all bkg available, not good!\033[0m')
         print(f'Fraction of real data candidates used for ML: {nCandBkg/nBkg:.5f}')
+        if inputCfg.get('savecands'):
+            nCandSummary.append([nCandBkg, nPrompt, nFD])
 
         TotDf = pd.concat([BkgDf.iloc[:nCandBkg], PromptDf, FDDf], sort=True)
         if FDDf.empty:
@@ -178,12 +202,15 @@ def train_test(inputCfg, PtBin, OutPutDirPt, TrainTestData, iBin): #pylint: disa
         print('Performing hyper-parameters optimisation: ...', end='\r')
         OutFileHypPars = open(f'{OutPutDirPt}/HyperParOpt_pT_{PtBin[0]}_{PtBin[1]}.txt', 'wt')
         sys.stdout = OutFileHypPars
-        ModelHandl.optimize_params_optuna(TrainTestData, OptunaOptConfig, metric,
-                                          n_trials=inputCfg['ml']['hyper_par_opt']['ntrials'],
-                                          direction=inputCfg['ml']['hyper_par_opt']['direction'],
-                                          save_study=f'{OutPutDirPt}/OptunaStudy_pT_{PtBin[0]}_{PtBin[1]}')
+        OptunaStudy = ModelHandl.optimize_params_optuna(TrainTestData, OptunaOptConfig, metric,
+                                                        n_trials=inputCfg['ml']['hyper_par_opt']['ntrials'],
+                                                        direction=inputCfg['ml']['hyper_par_opt']['direction'],
+                                                        save_study=f'{OutPutDirPt}/OptunaStudy_pT_{PtBin[0]}_{PtBin[1]}')
         OutFileHypPars.close()
         sys.stdout = sys.__stdout__
+        if inputCfg['ml']['hyper_par_opt'].get('saveopthistory'):
+            plot_hyp_optimization_results(OptunaStudy.trials_dataframe(), f"{OutPutDirPt}/HypTrials_pT_{PtBin[0]}_{PtBin[1]}")
+
         print('Performing hyper-parameters optimisation: Done!')
         print(f'Output saved in {OutPutDirPt}/HyperParOpt_pT_{PtBin[0]}_{PtBin[1]}.txt')
         print(f'Best hyper-parameters:\n{ModelHandl.get_model_params()}')
@@ -342,6 +369,7 @@ def main(): #pylint: disable=too-many-statements
     BkgHandler.slice_data_frame('fPt', PtBins, True)
     print('Loading and preparing data files: Done!')
 
+    nCandSummary = []
     for iBin, PtBin in enumerate(PtBins):
         print(f'\n\033[94mStarting ML analysis --- {PtBin[0]} < pT < {PtBin[1]} GeV/c\033[0m')
 
@@ -357,7 +385,7 @@ def main(): #pylint: disable=too-many-statements
         FDDfPt = pd.DataFrame() if FDHandler is None else FDHandler.get_slice(iBin)
         TrainTestData, PromptDfSelForEff, FDDfSelForEff = data_prep(inputCfg, iBin, PtBin, OutPutDirPt,
                                                                     PromptHandler.get_slice(iBin), FDDfPt,
-                                                                    BkgHandler.get_slice(iBin))
+                                                                    BkgHandler.get_slice(iBin), nCandSummary)
         if args.apply and inputCfg['data_prep']['test_fraction'] < 1.:
             print('\033[93mWARNING: Using only a fraction of the MC for the application! Are you sure?\033[0m')
 
@@ -386,5 +414,10 @@ def main(): #pylint: disable=too-many-statements
         for data in TrainTestData:
             del data
         del PromptDfSelForEff, FDDfSelForEff
+
+    if inputCfg.get('savecands'):
+        with open(f"{inputCfg["output"]["dir"]}/ncands.txt", 'w') as file:
+            for ibin, candPtSummary in enumerate(nCandSummary):
+                file.write(f"bin{ibin}:     BKG: {candPtSummary[0]},     PROMPT: {candPtSummary[1]},    FD: {candPtSummary[2]} \n")
 
 main()
