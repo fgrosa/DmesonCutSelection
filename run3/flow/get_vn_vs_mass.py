@@ -11,7 +11,7 @@ import numpy as np
 import yaml
 from ROOT import TLatex, TFile, TCanvas, TLegend, TH1D, TH1F, TDatabasePDG, TGraphAsymmErrors # pylint: disable=import-error,no-name-in-module
 from ROOT import gROOT, gPad, gInterpreter, kBlack, kRed, kAzure, kGray, kOrange, kGreen, kMagenta, kFullCircle, kFullSquare, kOpenCircle # pylint: disable=import-error,no-name-in-module
-from flow_analysis_utils import get_centrality_bins, get_vnfitter_results, get_ep_vn, getD0ReflHistos, get_particle_info # pylint: disable=import-error,no-name-in-module
+from flow_analysis_utils import get_centrality_bins, get_vnfitter_results, get_ep_vn, get_refl_histo, get_particle_info # pylint: disable=import-error,no-name-in-module
 sys.path.append('../../..')
 sys.path.append('../..')
 import os
@@ -43,6 +43,7 @@ def get_vn_vs_mass(fitConfigFileName, centClass, inFileName,
     ptBinsArr = np.asarray(ptLims, 'd')
     ptTit = '#it{p}_{T} (GeV/#it{c})'
     fixSigma = fitConfig['FixSigma']
+    fixSigmaFromFile = fitConfig['FixSigmaFromFile']
     fixMean = fitConfig['FixMean']
     harmonic = fitConfig['harmonic']
     particleName = fitConfig['Dmeson']
@@ -208,9 +209,9 @@ def get_vn_vs_mass(fitConfigFileName, centClass, inFileName,
     if useRefl and particleName == 'Dzero':
         if reflFile == '':
             reflFile = inFileName.replace('proj', 'proj_mc')
-            useRefl, hMCSgn, hMCRefl = getD0ReflHistos(reflFile, ptMins, ptMaxs)
+            useRefl, hMCSgn, hMCRefl = get_refl_histo(reflFile, ptMins, ptMaxs)
         else:
-            useRefl, hMCSgn, hMCRefl = getD0ReflHistos(reflFile, ptMins, ptMaxs)
+            useRefl, hMCSgn, hMCRefl = get_refl_histo(reflFile, ptMins, ptMaxs)
     else:
         useRefl = False
 
@@ -372,9 +373,22 @@ def get_vn_vs_mass(fitConfigFileName, centClass, inFileName,
             if fixMean[iPt]:
                 vnFitter[iPt].FixMeanFromMassFit()
             # Sigma
-            vnFitter[iPt].SetInitialGaussianSigma(fitConfig['Sigma'][iPt], 1)
             if fixSigma[iPt]:
+                if fixSigmaFromFile != '':
+                    sigmaFile = TFile.Open(fixSigmaFromFile)
+                    hSigmaFromFile = sigmaFile.Get('hSigmaSimFit')
+                    hSigmaFromFile.SetDirectory(0)
+                    sigmaBin = hSigmaFromFile.FindBin((ptMin+ptMax)/2)
+                    if hSigmaFromFile.GetBinLowEdge(sigmaBin) != ptMin:
+                        print(f'ERROR: bin edges do not match! Exit!')
+                        sys.exit()
+                    print(f'Fixing sigma from file: {hSigmaFromFile.GetBinContent(sigmaBin)}')
+                    vnFitter[iPt].SetInitialGaussianSigma(hSigmaFromFile.GetBinContent(sigmaBin), 1)
+                else:
+                    vnFitter[iPt].SetInitialGaussianSigma(fitConfig['Sigma'][iPt], 1)
                 vnFitter[iPt].FixSigmaFromMassFit()
+            else:
+                vnFitter[iPt].SetInitialGaussianSigma(fitConfig['Sigma'][iPt], 1)
             # nSigma4SB
             if 'NSigma4SB' in fitConfig:
                 vnFitter[iPt].SetNSigmaForVnSB(fitConfig['NSigma4SB'][iPt])

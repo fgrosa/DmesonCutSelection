@@ -139,6 +139,7 @@ def proj_MC(config, cutsetConfig, ptweights, ptweightsB, outputdir, suffix):
                 hVarRefl, hVarReflPrompt, hVarReflFD, hVarPrompt, hVarFD = None, None, None, None, None
                 varName = 'Pt' if iVar == 'Pt' else 'Mass'
                 axisNum = cutVars[iVar]['axisnum']
+                
                 if 'RecoAll' in sparseReco:
                     hVar = sparseReco['RecoAll'].Projection(axisNum)
                     hVar.SetName(f'h{varName}_{ptLowLabel:.0f}_{ptHighLabel:.0f}')
@@ -264,6 +265,7 @@ def proj_MC(config, cutsetConfig, ptweights, ptweightsB, outputdir, suffix):
             # end of apply pt weights for reconstruction level
 
             # apply pt weights for generation level
+            ## pt bins
             binGenMin = sparseGen['GenPrompt'].GetAxis(0).FindBin(ptMin*1.0001)
             binGenMax = sparseGen['GenPrompt'].GetAxis(0).FindBin(ptMax*0.9999)
             if particleName == 'Dzero':

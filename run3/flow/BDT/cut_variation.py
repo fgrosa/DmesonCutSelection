@@ -65,10 +65,11 @@ def cut_var(config_flow, an_res_file, centrality, resolution, outputdir, suffix)
                 # consider the different number of cutsets for each pt bin
                 if iCut >= CutSets[ipt]:
                     print(f'CutSet {iCut} not available for pt bin {pt_min} - {pt_max}')
-                    sig_cut_lower[iCut].append(sig_cut_lower[ipt][CutSets[ipt]-1])
-                    sig_cut_upper[iCut].append(sig_cut_upper[ipt][CutSets[ipt]-1])
-                    bkg_cut_lower[iCut].append(bkg_cut_lower[ipt][CutSets[ipt]-1])
-                    bkg_cut_upper[iCut].append(bkg_cut_upper[ipt][CutSets[ipt]-1])
+                    while len(sig_cut_lower[ipt]) < iCut+1:
+                        sig_cut_lower[ipt].append(sig_cut_lower[ipt][CutSets[ipt]-1])
+                        sig_cut_upper[ipt].append(sig_cut_upper[ipt][CutSets[ipt]-1])
+                        bkg_cut_lower[ipt].append(bkg_cut_lower[ipt][CutSets[ipt]-1])
+                        bkg_cut_upper[ipt].append(bkg_cut_upper[ipt][CutSets[ipt]-1])
 
                 outfile.mkdir(f'cent_bins{cent_min}_{cent_max}/pt_bins{pt_min}_{pt_max}')
                 outfile.cd(f'cent_bins{cent_min}_{cent_max}/pt_bins{pt_min}_{pt_max}')

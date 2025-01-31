@@ -138,7 +138,7 @@ def v2_vs_frac(config_flow, inputdir, outputdir, suffix):
         
         #TODO: plot the v2 vs pt, and the center of the pt bin is calculate by the average of pT
 
-        ptStrings.append(f"{ptMin:.0f} < #it{{p}}_{{T}} < {ptMax:.0f} GeV/#it{{c}}")
+        ptStrings.append(f"{ptMin:.1f} < #it{{p}}_{{T}} < {ptMax:.1f} GeV/#it{{c}}")
         chi2Strings.append(f"#chi^{{2}}/n.d.f = {chi2/ndf:.2f}")
 
 

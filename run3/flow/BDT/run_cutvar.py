@@ -32,8 +32,8 @@ def run_full_cut_variation(config_flow, anres_dir, cent, res_file, output, suffi
 
 #___________________________________________________________________________________________________________________________
 	# Load and copy the configuration file
-	# with open(config_flow, 'r') as cfgFlow:
-	# 	config = yaml.safe_load(cfgFlow)
+	with open(config_flow, 'r') as cfgFlow:
+		config = yaml.safe_load(cfgFlow)
 	
 	CutSets, _, _, _, _ = get_cut_sets_config(config_flow)
 	nCutSets = max(CutSets)
@@ -45,14 +45,26 @@ def run_full_cut_variation(config_flow, anres_dir, cent, res_file, output, suffi
 	os.system(f"mkdir -p {output_dir}")
 
 	# the pT weights histograms
-	PtWeightsDHistoName = 'hPtWeightsFONLLtimesTAMUDcent'
-	PtWeightsBHistoName = 'hPtWeightsFONLLtimesTAMUBcent'
- 
+	if 'ptWeights_path' in config and config['ptWeights_path'] is not None:
+		given_ptweights = True
+		given_ptWeightsPath = config['ptWeights_path']
+	else:
+		given_ptweights = False
+  
 	# copy the configuration file
-	config_suffix = 1
-	while os.path.exists(f'{output_dir}/config_flow_{suffix}_{config_suffix}.yml'):
+	config_suffix = 0
+	os.makedirs(f'{output_dir}/config_flow', exist_ok=True)
+	while os.path.exists(f'{output_dir}/config_flow/config_flow_{suffix}_{config_suffix}.yml'):
 		config_suffix = config_suffix + 1
-	os.system(f'cp {config_flow} {output_dir}/config_flow_{suffix}_{config_suffix}.yml')
+	os.system(f'cp {config_flow} {output_dir}/config_flow/config_flow_{suffix}_{config_suffix}.yml')
+
+	# backup the results into history
+	file_to_check = f"{output_dir}/V2VsFrac/V2VsFrac_{suffix}.root"
+	if os.path.exists(file_to_check):
+		for sub_path in ['ry', 'CutVarFrac', 'V2VsFrac']:
+			os.system(f"mkdir -p {output_dir}/history/{config_suffix}/{sub_path}")
+			os.system(f"cp {output_dir}/{sub_path}/* {output_dir}/history/{config_suffix}/{sub_path}")
+		os.system(f"cp {output_dir}/config_flow/config_flow_{suffix}_{config_suffix-1}.yml {output_dir}/history/{config_suffix}")
 
 #___________________________________________________________________________________________________________________________
 	# calculate the pT weights
@@ -95,7 +107,7 @@ def run_full_cut_variation(config_flow, anres_dir, cent, res_file, output, suffi
 		check_dir(f"{output_dir}/proj_mc")
 		ProjMcPath = "./proj_thn_mc.py"
 		
-		if not os.path.exists(f'{output_dir}/ptweights/pTweight_{suffix}.root'):
+		if not os.path.exists(f'{output_dir}/ptweights/pTweight_{suffix}.root') and not given_ptweights:
 			for i in range(nCutSets):
 				iCutSets = f"{i:02d}"
 				print(f"\033[32mpython3 {ProjMcPath} {config_flow} {output_dir}/config/cutset_{suffix}_{iCutSets}.yml -o {output_dir} -s {suffix}_{iCutSets}\033[0m")
@@ -103,16 +115,22 @@ def run_full_cut_variation(config_flow, anres_dir, cent, res_file, output, suffi
 		else:
 			for i in range(nCutSets):
 				iCutSets = f"{i:02d}"
+
+				if given_ptweights:
+					ptweightsPath = given_ptWeightsPath
+				else:
+					ptweightsPath = f'{output_dir}/ptweights/pTweight_{suffix}.root'
+
 				print(
 					f"\033[32mpython3 {ProjMcPath} {config_flow} {output_dir}/config/cutset_{suffix}_{iCutSets}.yml "
-					f"-w {output_dir}/ptweights/pTweight_{suffix}.root hPtWeightsFONLLtimesTAMUDcent "
-					f"-wb {output_dir}/ptweights/pTweight_{suffix}.root hPtWeightsFONLLtimesTAMUBcent "
+					f"-w {ptweightsPath} hPtWeightsFONLLtimesTAMUDcent "
+					f"-wb {ptweightsPath} hPtWeightsFONLLtimesTAMUBcent "
 					f"-o {output_dir} -s {suffix}_{iCutSets} \033[0m"
 				)
-				os.system(f"python3 {ProjMcPath} {config_flow} {output_dir}/config/cutset_{suffix}_{iCutSets}.yml \
-						-w {output_dir}/ptweights/pTweight_{suffix}.root hPtWeightsFONLLtimesTAMUDcent \
-						-wb {output_dir}/ptweights/pTweight_{suffix}.root hPtWeightsFONLLtimesTAMUBcent -o {output_dir} -s {suffix}_{iCutSets}")
-
+				os.system(f"python3 {ProjMcPath} {config_flow} {output_dir}/config/cutset_{suffix}_{iCutSets}.yml "
+						f"-w {ptweightsPath} hPtWeightsFONLLtimesTAMUDcent "
+						f"-wb {ptweightsPath} hPtWeightsFONLLtimesTAMUBcent "
+						f"-o {output_dir} -s {suffix}_{iCutSets}")
 	else:
 		print("\033[33mWARNING: Projection for MC will not be performed\033[0m")							
 

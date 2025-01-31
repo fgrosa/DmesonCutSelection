@@ -185,8 +185,8 @@ def compute_frac_cut_var(config_flow, inputdir, outputdir, suffix, batch=False):
             hCovCorrYields[covElem[0]][covElem[1]].SetBinContent(iPt+1, covMatrixCorrYields.item(covElem))
             hCovCorrYields[covElem[0]][covElem[1]].SetBinError(iPt+1, 0.)
 
-        ptString = f'pT{ptMin:.0f}_{ptMax:.0f}'
-        commonString = f'{ptMin:.0f} < #it{{p}}_{{T}} < {ptMax:.0f}  GeV/#it{{c}};cut set'
+        ptString = f'pT{ptMin:.1f}_{ptMax:.1f}'
+        commonString = f'{ptMin:.1f} < #it{{p}}_{{T}} < {ptMax:.1f}  GeV/#it{{c}};cut set'
         hRawYieldsVsCut.append(TH1F(f'hRawYieldsVsCutPt_{ptString}', f'{commonString};raw yield', nSets, 0.5, nSets + 0.5))
         hRawYieldsVsCutReSum.append(TH1F(f'hRawYieldsVsCutReSum_{ptString}', f'{commonString};raw yield',
                                         nSets, 0.5, nSets + 0.5))

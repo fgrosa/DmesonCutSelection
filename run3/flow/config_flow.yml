@@ -41,6 +41,8 @@ detC: 'TPCpos'
 # fit options
 Dmeson: 'Dplus'
 FixSigma: 0
+Sigma: [0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02]
+FixSigmaFromFile: ''
 SigmaFile: ''
 SigmaMultFactor: 1.
 FixMean: 0
@@ -128,6 +130,7 @@ shapes:
             file: 
                 B: /home/wuct/ALICE/local/DmesonAnalysis/models/tamu/B_TAMU_RAA_5TeV_3050.txt
                 Bs: ''
+ptWeights_path: ''
 
 #_______________________________________________________________________________________________________________________
 ## used for the MC in projection_thnsparse.py

@@ -16,7 +16,7 @@ cutobjects/**/*.root
 filterdata/**/*.root
 AnalysisResults/
 optimisation/*.root
-
+run3/flow/Results/*
 # python/ML
 __pycache__
 *.pyc

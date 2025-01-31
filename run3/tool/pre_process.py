@@ -77,7 +77,7 @@ def pre_process(an_res_file, ptmins, ptmaxs, axestokeep, outputDir):
         print(f'Finished processing pT bin {ptmin} - {ptmax}')
 
     # Loop over each pt bin in parallel
-    max_workers = 6
+    max_workers = 12 # hyperparameter
     with concurrent.futures.ThreadPoolExecutor(max_workers) as executor:
         tasks = [executor.submit(process_pt_bin, iPt, ptmin, ptmax, thnsparse_list, axestokeep, outputDir) for iPt, (ptmin, ptmax) in enumerate(zip(ptmins, ptmaxs))]
         for task in concurrent.futures.as_completed(tasks):

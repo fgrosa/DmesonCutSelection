@@ -75,7 +75,9 @@ def run_full_analysis(config,
         if not os.path.exists(f"{outputdir}/resolution"):
             os.makedirs(f"{outputdir}/resolution")
         outputdir_reso = f"-o {outputdir}/resolution/"
-        command_reso = f"python3 {os.path.join(script_dir, 'compute_reso.py')} {an_res_file} {cent_withopt} {suffix_withopt} {outputdir_reso} {vn_method_withopt}"
+        # for resolution, only consider one single AnRes.root file
+        reso_file = an_res_file[0]
+        command_reso = f"python3 {os.path.join(script_dir, 'compute_reso.py')} {reso_file} {cent_withopt} {suffix_withopt} {outputdir_reso} {vn_method_withopt}"
         if wagon_id != "":
             command_reso += f" {wagon_id_withopt}"
         print("\n\033[92m Starting resolution extraction\033[0m")
